@@ -25,7 +25,7 @@ for (i, j, c, w) in World.specials:
 
 
 def do_action(action):
-    s = World.player
+    s = World.player_M
     r = -World.score
     if action == actions[0]:
         World.try_move(0, -1)
@@ -37,10 +37,26 @@ def do_action(action):
         World.try_move(1, 0)
     else:
         return
-    s2 = World.player
+    s2 = World.player_M
     r += World.score
     return s, action, r, s2
 
+def do_action_F(action):
+    s = World.player_F
+    r = -World.score
+    if action == actions[0]:
+        World.try_move_F(0, -1)
+    elif action == actions[1]:
+        World.try_move_F(0, 1)
+    elif action == actions[2]:
+        World.try_move_F(-1, 0)
+    elif action == actions[3]:
+        World.try_move_F(1, 0)
+    else:
+        return
+    s2 = World.player_F
+    r += World.score
+    return s, action, r, s2
 
 def max_Q(s):
     val = None
@@ -63,15 +79,25 @@ def run():
     time.sleep(1)
     alpha = 1
     t = 1
+    change = False
     while True:
         # Pick the right action
-        s = World.player
-        max_act, max_val = max_Q(s)
-        (s, a, r, s2) = do_action(max_act)
+        if change == False:
+            s = World.player_M
+            max_act, max_val = max_Q(s)
+            (s, a, r, s2) = do_action(max_act)
 
-        # Update Q
-        max_act, max_val = max_Q(s2)
-        inc_Q(s, a, alpha, r + discount * max_val)
+            # Update Q
+            max_act, max_val = max_Q(s2)
+            inc_Q(s, a, alpha, r + discount * max_val)
+        else:
+            s = World.player_F
+            max_act, max_val = max_Q(s)
+            (s, a, r, s2) = do_action_F(max_act)
+
+            # Update Q
+            max_act, max_val = max_Q(s2)
+            inc_Q(s, a, alpha, r + discount * max_val)
 
         # Check if the game has restarted
         t += 1.0
@@ -79,12 +105,16 @@ def run():
             World.restart_game()
             time.sleep(0.01)
             t = 1.0
+        if change:
+            change = False
+        else:
+            change = True
 
         # Update the learning rate
         alpha = pow(t, -0.1)
 
         # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
-        time.sleep(0.1)
+        time.sleep(.5)
 
 
 t = threading.Thread(target=run)

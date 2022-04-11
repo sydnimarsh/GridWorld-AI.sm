@@ -10,7 +10,8 @@ Width = 100
 actions = ["up", "down", "left", "right"]
 
 board = Canvas(master, width=x*Width, height=y*Width)
-player = (1, y-1)
+player_M = (0, y-1)
+player_F = (0,0)
 score = 1
 restart = False
 walk_reward = -0.04
@@ -44,7 +45,7 @@ def create_triangle(i, j, action):
 
 
 def render_grid():
-    global specials, walls, Width, x, y, player
+    global specials, walls, Width, x, y, player_M
     for i in range(x):
         for j in range(y):
             board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill="white", width=1)
@@ -74,16 +75,16 @@ def set_cell_score(state, action, val):
     board.itemconfigure(triangle, fill=color)
 
 
-def try_move(dx, dy):
-    global player, x, y, score, walk_reward, me, restart
+def try_move( dx, dy):
+    global player_M, x, y, score, walk_reward, me, restart
     if restart == True:
         restart_game()
-    new_x = player[0] + dx
-    new_y = player[1] + dy
+    new_x = player_M[0] + dx
+    new_y = player_M[1] + dy
     score += walk_reward
     if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y): #and not ((new_x, new_y) in walls):
         board.coords(me, new_x*Width+Width*2/10, new_y*Width+Width*2/10, new_x*Width+Width*8/10, new_y*Width+Width*8/10)
-        player = (new_x, new_y)
+        player_M = (new_x, new_y)
     for (i, j, c, w) in specials:
         if new_x == i and new_y == j:
             score -= walk_reward
@@ -95,6 +96,27 @@ def try_move(dx, dy):
             restart = True
             return
     #print "score: ", score
+
+def try_move_F(dx, dy):
+    global player_F, x, y, score, walk_reward, me_F, restart
+    if restart == True:
+        restart_game()
+    new_x = player_F[0] + dx
+    new_y = player_F[1] + dy
+    score += walk_reward
+    if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y): #and not ((new_x, new_y) in walls):
+        board.coords(me_F, new_x*Width+Width*2/10, new_y*Width+Width*2/10, new_x*Width+Width*8/10, new_y*Width+Width*8/10)
+        player_F = (new_x, new_y)
+    for (i, j, c, w) in specials:
+        if new_x == i and new_y == j:
+            score -= walk_reward
+            score += w
+            if score > 0:
+                print("Success! score: ", score)
+            else:
+                print("Fail! score: ", score)
+            restart = True
+            return
 
 
 def call_up(event):
@@ -114,11 +136,14 @@ def call_right(event):
 
 
 def restart_game():
-    global player, score, me, restart
-    player = (0, y-1)
+    global player_M, score, me, restart
+    player_M = (0, y-1)
+    player_F = (0,0)
     score = 1
     restart = False
-    board.coords(me, player[0]*Width+Width*2/10, player[1]*Width+Width*2/10, player[0]*Width+Width*8/10, player[1]*Width+Width*8/10)
+    board.coords(me, player_M[0]*Width+Width*2/10, player_M[1]*Width+Width*2/10, player_M[0]*Width+Width*8/10, player_M[1]*Width+Width*8/10)
+    board.coords(me_F, player_F[0]*Width+Width*2/10, player_F[1]*Width+Width*2/10, player_F[0]*Width+Width*8/10, player_F[1]*Width+Width*8/10)
+
 
 def has_restarted():
     return restart
@@ -128,8 +153,10 @@ master.bind("<Down>", call_down)
 master.bind("<Right>", call_right)
 master.bind("<Left>", call_left)
 
-me = board.create_rectangle(player[0]*Width+Width*2/10, player[1]*Width+Width*2/10,
-                            player[0]*Width+Width*8/10, player[1]*Width+Width*8/10, fill="orange", width=1, tag="me")
+me = board.create_rectangle(player_M[0]*Width+Width*2/10, player_M[1]*Width+Width*2/10,
+                            player_M[0]*Width+Width*8/10, player_M[1]*Width+Width*8/10, fill="orange", width=1, tag="me")
+me_F = board.create_rectangle(player_F[0]*Width+Width*2/10, player_F[1]*Width+Width*2/10,
+                            player_F[0]*Width+Width*8/10, player_F[1]*Width+Width*8/10, fill="blue", width=1, tag="me_F")
 
 board.grid(row=0, column=0)
 
