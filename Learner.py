@@ -14,7 +14,7 @@ for i in range(World.x):
 for state in states:
     temp = {}
     for action in actions:
-        temp[action] = 0.1
+        temp[action] = 0
         World.set_cell_score(state, action, temp[action])
     Q[state] = temp
 
@@ -81,6 +81,7 @@ def run():
     t = 1
     change = False
     while True:
+
         # Pick the right action
         if change == False:
             s = World.player_M
@@ -105,6 +106,7 @@ def run():
             World.restart_game()
             time.sleep(0.01)
             t = 1.0
+        print(Q[s])
         if change:
             change = False
         else:
