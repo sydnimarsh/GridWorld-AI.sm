@@ -1,4 +1,5 @@
 __author__ = 'philippe'
+from turtle import width
 from Tkinter import *
 master = Tk()
 
@@ -10,14 +11,17 @@ Width = 100
 actions = ["up", "down", "left", "right"]
 
 board = Canvas(master, width=x*Width, height=y*Width)
-player_M = (0, y-1)
-player_F = (0,0)
+player_M = (2, y-1)
+player_M_block = False
+player_F = (2,0)
+player_F_block =False
 score = 1
 restart = False
-walk_reward = -0.04
+walk_reward = -1
 
-walls = [(1, 1), (1, 2), (2, 1), (2, 2)]
-specials = [(4, 1, "red", -1), (4, 0, "green", 1)]
+specials = [[1, 3, "blue", 13, 10]]#(1, 3, "green", 13)
+drop_off = [[2, 2, "green", 13, 0], [0,0,"green", 13, 0]]
+
 cell_scores = {}
 
 
@@ -45,7 +49,7 @@ def create_triangle(i, j, action):
 
 
 def render_grid():
-    global specials, walls, Width, x, y, player_M
+    global specials, Width, x, y, player_M
     for i in range(x):
         for j in range(y):
             board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill="white", width=1)
@@ -53,12 +57,24 @@ def render_grid():
             for action in actions:
                 temp[action] = create_triangle(i, j, action)
             cell_scores[(i,j)] = temp
-    for (i, j, c, w) in specials:
+    for (i, j, c, w, b) in specials:
         board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill=c, width=1)
+        board.create_text(i*Width + 50, j*Width + 50, text=b, fill = "black", font=('Helvetica 15 bold'))
+    for (i, j, c, w, b) in drop_off:
+        board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill=c, width=1)
+        board.create_text(i*Width + 50, j*Width + 50, text=b, fill = "black", font=('Helvetica 15 bold'))
     #for (i, j) in walls:
      #   board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill="black", width=1)
 
 render_grid()
+
+def render_count():
+    for (i, j, c, w, b) in specials:
+        board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill=c, width=1)
+        board.create_text(i*Width + 50, j*Width + 50, text=b, fill = "black", font=('Helvetica 15 bold'))
+    for (i, j, c, w, b) in drop_off:
+        board.create_rectangle(i*Width, j*Width, (i+1)*Width, (j+1)*Width, fill=c, width=1)
+        board.create_text(i*Width + 50, j*Width + 50, text=b, fill = "black", font=('Helvetica 15 bold'))
 
 
 def set_cell_score(state, action, val):
@@ -76,47 +92,85 @@ def set_cell_score(state, action, val):
 
 
 def try_move( dx, dy):
-    global player_M, x, y, score, walk_reward, me, restart
+    global player_M, x, y, score, walk_reward, me, restart, player_M_block, player_F
     if restart == True:
         restart_game()
     new_x = player_M[0] + dx
     new_y = player_M[1] + dy
     score += walk_reward
-    if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y): #and not ((new_x, new_y) in walls):
+    if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and((new_x, new_y) != player_F) : #and (new_x != player_F[0]) and (new_y != player_F[1]) and not ((new_x, new_y) in walls):
         board.coords(me, new_x*Width+Width*2/10, new_y*Width+Width*2/10, new_x*Width+Width*8/10, new_y*Width+Width*8/10)
         player_M = (new_x, new_y)
-    for (i, j, c, w) in specials:
+    for k in range(len(specials)):
+        if new_x == specials[k][0] and new_y == specials[k][1]:
+            if (player_M_block == False):
+                score -= walk_reward
+                score += specials[k][3]
+                player_M_block = True
+                specials[k][4] = specials[k][4] - 1
+                print("Picked up block")
+    for k in range(len(drop_off)):
+        if new_x == drop_off[k][0] and new_y == drop_off[k][1]:
+            if (player_M_block == True):
+                score -= walk_reward
+                score += drop_off[k][3]
+                player_M_block = False
+                drop_off[k][4] = drop_off[k][4] + 1
+                print("Dropped Off")
+                #restart = True
+                print("score: ", score)
+                break
+
+    """ for (i, j, c, w, b) in specials:
         if new_x == i and new_y == j:
-            score -= walk_reward
-            score += w
-            if score > 0:
-                print("Success! score: ", score)
-            else:
-                print("Fail! score: ", score)
-            restart = True
-            return
-    #print "score: ", score
+            if (player_M_block == False):
+                score -= walk_reward
+                score += w
+                player_M_block = True
+                b -= 1
+                print("Picked up block")
+    for (i, j, c, w, b) in drop_off:
+        if new_x == i and new_y == j:
+            if (player_M_block == True):
+                score -= walk_reward
+                score += w
+                player_M_block = False
+                print("Dropped Off")
+                #restart = True
+                print("score: ", score)
+                return """
+    
+    #print ("score: ", score)
 
 def try_move_F(dx, dy):
-    global player_F, x, y, score, walk_reward, me_F, restart
+    global player_F, x, y, score, walk_reward, me_F, restart, player_F_block, player_M
     if restart == True:
         restart_game()
     new_x = player_F[0] + dx
     new_y = player_F[1] + dy
     score += walk_reward
-    if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y): #and not ((new_x, new_y) in walls):
+    if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and((new_x, new_y) != player_M) : #and (new_x != player_F[0]) and (new_y != player_F[1]) and not ((new_x, new_y) in walls):
         board.coords(me_F, new_x*Width+Width*2/10, new_y*Width+Width*2/10, new_x*Width+Width*8/10, new_y*Width+Width*8/10)
         player_F = (new_x, new_y)
-    for (i, j, c, w) in specials:
-        if new_x == i and new_y == j:
-            score -= walk_reward
-            score += w
-            if score > 0:
-                print("Success! score: ", score)
-            else:
-                print("Fail! score: ", score)
-            restart = True
-            return
+    for k in range(len(specials)):
+        if new_x == specials[k][0] and new_y == specials[k][1]:
+            if (player_F_block == False):
+                score -= walk_reward
+                score += specials[k][3]
+                player_F_block = True
+                specials[k][4] = specials[k][4] - 1
+                print("Picked up block")
+    for k in range(len(drop_off)):
+        if new_x == drop_off[k][0] and new_y == drop_off[k][1]:
+            if (player_F_block == True):
+                score -= walk_reward
+                score += drop_off[k][3]
+                player_F_block = False
+                drop_off[k][4] = drop_off[k][4] + 1
+                print("Dropped Off")
+                #restart = True
+                print("score: ", score)
+                break
 
 
 def call_up(event):
@@ -137,8 +191,8 @@ def call_right(event):
 
 def restart_game():
     global player_M, score, me, restart
-    player_M = (0, y-1)
-    player_F = (0,0)
+    player_M = (2, y-1)
+    player_F = (2,0)
     score = 1
     restart = False
     board.coords(me, player_M[0]*Width+Width*2/10, player_M[1]*Width+Width*2/10, player_M[0]*Width+Width*8/10, player_M[1]*Width+Width*8/10)
